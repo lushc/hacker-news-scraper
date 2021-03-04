@@ -34,7 +34,7 @@ type ItemResponse struct {
 	Deleted     bool   `json:"deleted"`
 	Type        string `json:"type"`
 	By          string `json:"by"`
-	Time        int    `json:"time"`
+	Time        int64  `json:"time"`
 	Text        string `json:"text"`
 	Dead        bool   `json:"dead"`
 	Parent      int    `json:"parent"`
@@ -81,11 +81,11 @@ func (h HNClient) doGet(ctx context.Context, endpoint string) ([]byte, error) {
 func (h HNClient) TopStories(ctx context.Context) (res TopStoriesResponse, err error) {
 	body, err := h.doGet(ctx, "topstories.json")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetch top stories: %w", err)
 	}
 
 	if err := json.Unmarshal(body, &res); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal top stories: %w", err)
 	}
 
 	return res, nil
@@ -94,11 +94,11 @@ func (h HNClient) TopStories(ctx context.Context) (res TopStoriesResponse, err e
 func (h HNClient) Item(ctx context.Context, id int) (res ItemResponse, err error) {
 	body, err := h.doGet(ctx, fmt.Sprintf("item/%d.json", id))
 	if err != nil {
-		return ItemResponse{}, err
+		return ItemResponse{}, fmt.Errorf("fetch item %d: %w", id, err)
 	}
 
 	if err := json.Unmarshal(body, &res); err != nil {
-		return ItemResponse{}, err
+		return ItemResponse{}, fmt.Errorf("unmarshal item %d: %w", id, err)
 	}
 
 	return res, nil

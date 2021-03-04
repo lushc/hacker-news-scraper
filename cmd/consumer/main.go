@@ -6,17 +6,29 @@ import (
 	"sync"
 
 	"github.com/lushc/hacker-news-scraper/internal/consumer"
+	"github.com/lushc/hacker-news-scraper/internal/datastore"
+)
+
+const (
+	workerCount = 10
 )
 
 func main() {
-	client := consumer.NewHNClient()
-	worker := consumer.NewWorker(client)
-
 	ctx := context.Background()
+
+	writer, err := datastore.NewDBWriter(ctx, workerCount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer writer.Close()
+
+	client := consumer.NewHNClient()
+	worker := consumer.NewWorker(client, writer)
+
 	items := make(chan int)
 	wg := &sync.WaitGroup{}
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
 		go worker.Run(ctx, items, wg)
 	}
