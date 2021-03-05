@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+option go_package = "github.com/lushc/hacker-news-scraper/protobufs";
+
+package hackernews;
+
+import "google/protobuf/empty.proto";
+
+service API {
+  rpc ListAll (google.protobuf.Empty) returns (stream Item) {}
+  rpc ListType (TypeRequest) returns (stream Item) {}
+}
+
+message TypeRequest {
+  enum Type {
+    JOB = 0;
+    STORY = 1;
+  }
+  Type type = 1;
+}
+
+message Item {
+  int32 id = 1;
+  string type = 2;
+  string title = 3;
+  string content = 4;
+  string url = 5;
+  sint32 score = 6;
+  string created_by = 7;
+  int64 created_at = 8;
+}

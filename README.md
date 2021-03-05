@@ -1,5 +1,11 @@
 # hacker-news-scraper
 
+## Requirements
+
+* Go 1.16
+* Protocol buffer compiler & gRPC (see [Quick Start](https://grpc.io/docs/languages/go/quickstart/#prerequisites))
+* Docker
+
 ## Usage
 
 Make a copy the env file:

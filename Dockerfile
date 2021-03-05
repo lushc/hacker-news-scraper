@@ -21,6 +21,7 @@ RUN go mod download
 
 COPY ./cmd/ ./cmd/
 COPY ./internal/ ./internal/
+COPY ./protobufs/ ./protobufs/
 
 RUN GOOS=linux CGO_ENABLED=0 GOGC=off GOARCH=amd64 go build -o "./bin/${app}" "./cmd/${app}"
 
