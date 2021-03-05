@@ -41,4 +41,7 @@ func main() {
 	for _, item := range topStories {
 		items <- item
 	}
+
+	close(items)
+	wg.Wait()
 }
