@@ -11,5 +11,15 @@ services:
       - ./migrations/:/docker-entrypoint-initdb.d/
     ports:
       - 5432:5432
+  consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        app: consumer
+    entrypoint: ["./consumer"]
+    env_file: .env
+    depends_on:
+      - postgres
 volumes:
   data:
