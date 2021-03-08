@@ -2,7 +2,10 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"os"
+	"strconv"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -11,35 +14,77 @@ import (
 	pb "github.com/lushc/hacker-news-scraper/protobufs"
 )
 
-var (
-	enumTypes = map[pb.TypeRequest_Type]datastore.ItemType{
-		pb.TypeRequest_JOB:   datastore.Job,
-		pb.TypeRequest_STORY: datastore.Story,
-	}
+const (
+	serverPortEnv = "SERVER_PORT"
 )
 
-type server struct {
+var (
+	errServerPortEnv = fmt.Errorf("missing env var %s", serverPortEnv)
+)
+
+type Server struct {
+	port   int
+	reader datastore.Reader
 	pb.UnimplementedAPIServer
 }
 
-func (s server) ListAll(empty *emptypb.Empty, stream pb.API_ListAllServer) error {
-	panic("implement me")
+func NewServer(reader datastore.Reader) (*Server, error) {
+	// TODO: viper config instead
+	portEnv, ok := os.LookupEnv(serverPortEnv)
+	if !ok {
+		log.Fatal(errServerPortEnv)
+	}
+
+	port, err := strconv.Atoi(portEnv)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &Server{
+		port:   port,
+		reader: reader,
+	}, nil
 }
 
-func (s server) ListType(request *pb.TypeRequest, stream pb.API_ListTypeServer) error {
-	fmt.Println(enumTypes[*request.Type.Enum()])
-	panic("implement me")
+func (s Server) ListAll(empty *emptypb.Empty, stream pb.API_ListAllServer) error {
+	items, err := s.reader.All(stream.Context())
+	if err != nil {
+		return fmt.Errorf("ListAll read: %w", err)
+	}
+
+	for _, item := range items {
+		if err := stream.Send(datastore.Itop(*item)); err != nil {
+			return fmt.Errorf("ListAll send: %w", err)
+		}
+	}
+
+	return nil
 }
 
-func StartServer(port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+func (s Server) ListType(request *pb.TypeRequest, stream pb.API_ListTypeServer) error {
+	items, err := s.reader.ByItemType(stream.Context(), datastore.EnumTypes[request.Type])
+	if err != nil {
+		return fmt.Errorf("ListType read: %w", err)
+	}
+
+	for _, item := range items {
+		if err := stream.Send(datastore.Itop(*item)); err != nil {
+			return fmt.Errorf("ListType send: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Server) Start() error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterAPIServer(s, &server{})
-	if err := s.Serve(lis); err != nil {
+	gs := grpc.NewServer()
+	pb.RegisterAPIServer(gs, s)
+	if err := gs.Serve(lis); err != nil {
 		return fmt.Errorf("failed to serve: %w", err)
 	}
 

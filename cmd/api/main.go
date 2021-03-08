@@ -1,34 +1,32 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
-	"os"
-	"strconv"
 
 	"github.com/lushc/hacker-news-scraper/internal/api"
-)
-
-const (
-	serverPortEnv = "SERVER_PORT"
-)
-
-var (
-	errServerPortEnv = fmt.Errorf("missing env var %s", serverPortEnv)
+	"github.com/lushc/hacker-news-scraper/internal/datastore"
 )
 
 func main() {
-	portEnv, ok := os.LookupEnv(serverPortEnv)
-	if !ok {
-		log.Fatal(errServerPortEnv)
-	}
-
-	port, err := strconv.Atoi(portEnv)
+	ctx := context.Background()
+	conn, err := datastore.NewDBConn(ctx, 5)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := api.StartServer(port); err != nil {
+	reader, err := api.NewCachedReader(datastore.NewDBReader(*conn))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer reader.Close()
+
+	srv, err := api.NewServer(reader)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := srv.Start(); err != nil {
 		log.Fatal(err)
 	}
 }
