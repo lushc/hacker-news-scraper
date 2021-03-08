@@ -9,6 +9,7 @@ require (
 	github.com/golang/protobuf v1.4.3
 	github.com/hashicorp/go-retryablehttp v0.6.8
 	github.com/jackc/pgx/v4 v4.10.1
+	github.com/labstack/echo/v4 v4.2.1 // indirect
 	github.com/sirupsen/logrus v1.8.0
 	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/sys v0.0.0-20210112080510-489259a85091 // indirect

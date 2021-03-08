@@ -36,5 +36,15 @@ services:
     depends_on:
       - postgres
       - redis
+  presenter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        app: presenter
+    entrypoint: ["./presenter"]
+    env_file: .env
+    ports:
+      - 8080:80
 volumes:
   data:

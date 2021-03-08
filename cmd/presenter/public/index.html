@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Hacker News Scraper</title>
+    <link href="style.css" rel="stylesheet"/>
+</head>
+<body>
+<script type="text/javascript">
+    var source = new EventSource('/events/all');
+
+    source.onmessage = function(e) {
+        document.body.innerHTML += e.data + '<br>';
+    };
+</script>
+</body>
+</html>
