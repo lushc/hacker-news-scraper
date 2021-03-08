@@ -1,0 +1,1 @@
+SELECT * FROM top_stories WHERE type = $1

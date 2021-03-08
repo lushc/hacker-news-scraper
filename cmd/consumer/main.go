@@ -16,12 +16,13 @@ const (
 func main() {
 	ctx := context.Background()
 
-	writer, err := datastore.NewDBWriter(ctx, workerCount)
+	conn, err := datastore.NewDBConn(ctx, workerCount)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer writer.Close()
 
+	writer := datastore.NewDBWriter(*conn)
+	defer writer.Close()
 	client := consumer.NewHNClient()
 	worker := consumer.NewWorker(client, writer)
 

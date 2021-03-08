@@ -7,13 +7,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/lushc/hacker-news-scraper/internal/datastore"
 	pb "github.com/lushc/hacker-news-scraper/protobufs"
 )
 
 var (
-	enumTypes = map[pb.TypeRequest_Type]string{
-		pb.TypeRequest_JOB:   "job",
-		pb.TypeRequest_STORY: "story",
+	enumTypes = map[pb.TypeRequest_Type]datastore.ItemType{
+		pb.TypeRequest_JOB:   datastore.Job,
+		pb.TypeRequest_STORY: datastore.Story,
 	}
 )
 

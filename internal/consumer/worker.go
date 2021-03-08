@@ -46,7 +46,7 @@ func (w Worker) Run(ctx context.Context, items <-chan int, wg *sync.WaitGroup) {
 
 			record := datastore.Item{
 				ID:        item.ID,
-				Type:      item.Type,
+				Type:      datastore.ItemType(item.Type),
 				Title:     item.Title,
 				Content:   item.Text,
 				URL:       item.URL,

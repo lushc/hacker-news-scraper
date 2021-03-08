@@ -2,9 +2,16 @@ package datastore
 
 import "time"
 
+const (
+	Job   ItemType = "job"
+	Story ItemType = "story"
+)
+
+type ItemType string
+
 type Item struct {
 	ID        int
-	Type      string
+	Type      ItemType
 	Title     string
 	Content   string
 	URL       string
