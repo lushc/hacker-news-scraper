@@ -11,6 +11,10 @@ services:
       - ./migrations/:/docker-entrypoint-initdb.d/
     ports:
       - 5432:5432
+  redis:
+    image: redis:6.2
+    ports:
+      - 6379:6379
   consumer:
     build:
       context: .
@@ -31,5 +35,6 @@ services:
     env_file: .env
     depends_on:
       - postgres
+      - redis
 volumes:
   data:
