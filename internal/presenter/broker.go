@@ -48,7 +48,7 @@ func NewBroker(source Source) *Broker {
 
 // Handle will start the broker and return a handler for echo to invoke when an endpoint is hit
 func (b *Broker) Handle(ctx context.Context) echo.HandlerFunc {
-	b.run(ctx)
+	go b.run(ctx)
 	return b.handler
 }
 
@@ -57,35 +57,33 @@ func (b *Broker) Refresh() {
 	b.source(b.items, b.errs, false)
 }
 
-// run will begin a goroutine that manages subscribers and broadcasting events to them
+// run will manage subscribers and broadcast events to them
 func (b *Broker) run(ctx context.Context) {
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case ch := <-b.newSubs:
-				// TODO: mux needed?
-				b.subscribers[ch] = nil
-			case ch := <-b.expiredSubs:
-				// TODO: mux needed?
-				delete(b.subscribers, ch)
-				close(ch)
-			case item := <-b.items:
-				evt, err := encode(item)
-				if err != nil {
-					b.logger.Error(fmt.Errorf("encode event for subscribers: %w", err))
-					break
-				}
-
-				for ch := range b.subscribers {
-					ch <- evt
-				}
-			case err := <-b.errs:
-				b.logger.Error(fmt.Errorf("error from broker channel: %w", err))
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ch := <-b.newSubs:
+			// TODO: mux needed?
+			b.subscribers[ch] = nil
+		case ch := <-b.expiredSubs:
+			// TODO: mux needed?
+			delete(b.subscribers, ch)
+			close(ch)
+		case item := <-b.items:
+			evt, err := encode(item)
+			if err != nil {
+				b.logger.Error(fmt.Errorf("encode event for subscribers: %w", err))
+				break
 			}
+
+			for ch := range b.subscribers {
+				ch <- evt
+			}
+		case err := <-b.errs:
+			b.logger.Error(fmt.Errorf("error from broker channel: %w", err))
 		}
-	}()
+	}
 }
 
 // handler will stream event data to the client of the invoking HTTP request
