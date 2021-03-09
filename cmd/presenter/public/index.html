@@ -33,7 +33,6 @@
         source = new EventSource('/events/' + type);
 
         source.onmessage = function(e) {
-            console.log(e)
             if (!seen.hasOwnProperty(e.lastEventId)) {
                 seen[e.lastEventId] = true
                 container.innerHTML += '<div class="item">' + e.data + '</div>';
