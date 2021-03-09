@@ -20,6 +20,7 @@ var (
 
 type ItemType string
 
+// Item models a Hacker News item
 // TODO: refactor to just use the protobuf type?
 type Item struct {
 	ID        int
@@ -32,6 +33,7 @@ type Item struct {
 	CreatedAt time.Time
 }
 
+// Itop converts the model to the protobuf
 func Itop(item Item) *pb.Item {
 	var itemType pb.Type
 	for k, v := range EnumTypes {
@@ -53,6 +55,7 @@ func Itop(item Item) *pb.Item {
 	}
 }
 
+// Ptoi converts the protobuf to the model
 func Ptoi(proto *pb.Item) *Item {
 	return &Item{
 		ID:        int(proto.Id),

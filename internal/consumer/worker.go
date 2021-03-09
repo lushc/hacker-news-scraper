@@ -9,12 +9,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Worker is a worker for fetching a Hacker News item and persisting it to the datastore
 type Worker struct {
 	client Client
 	writer datastore.Writer
 	logger *logrus.Logger
 }
 
+// NewWorker creates a new worker
 func NewWorker(client Client, writer datastore.Writer) *Worker {
 	return &Worker{
 		client: client,
@@ -23,6 +25,7 @@ func NewWorker(client Client, writer datastore.Writer) *Worker {
 	}
 }
 
+// Run is meant to be ran concurrently, receiving item IDs from a channel to fetch and persist
 func (w Worker) Run(ctx context.Context, items <-chan int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for {

@@ -8,10 +8,12 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+// DBConn is a connection pool to Postgres
 type DBConn struct {
 	*pgxpool.Pool
 }
 
+// NewDBConn creates a new connection pool and only connects to the server once it starts to be used
 func NewDBConn(ctx context.Context, maxConns int) (*DBConn, error) {
 	// TODO: this + maxConns could be viper config based instead
 	connUrl := fmt.Sprintf(

@@ -14,21 +14,26 @@ const (
 	baseUrl = "https://hacker-news.firebaseio.com/v0/"
 )
 
+// Client is an interface for consuming the Hacker News API
 type Client interface {
 	TopStories(ctx context.Context) (TopStoriesResponse, error)
 	Item(ctx context.Context, id int) (ItemResponse, error)
 }
 
+// HNClient is a client for the Hacker News API
 type HNClient struct {
 	client *http.Client
 }
 
+// NotSuccessfulError is used when encountering a non-200 response
 type NotSuccessfulError struct {
 	statusCode int
 }
 
+// TopStoriesResponse is the response returned when fetching top stories
 type TopStoriesResponse []int
 
+// ItemResponse is the response returned when fetching an item
 type ItemResponse struct {
 	ID          int    `json:"id"`
 	Deleted     bool   `json:"deleted"`
@@ -47,6 +52,7 @@ type ItemResponse struct {
 	Descendants int    `json:"descendants"`
 }
 
+// NewHNClient creates a new client for querying the Hacker News API
 func NewHNClient() *HNClient {
 	client := retryablehttp.NewClient()
 	client.Logger = nil
@@ -54,6 +60,7 @@ func NewHNClient() *HNClient {
 	return &HNClient{client: client.StandardClient()}
 }
 
+// doGet performs a GET request for the given endpoint
 func (h HNClient) doGet(ctx context.Context, endpoint string) ([]byte, error) {
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, baseUrl+endpoint, nil)
 	if err != nil {
@@ -78,6 +85,7 @@ func (h HNClient) doGet(ctx context.Context, endpoint string) ([]byte, error) {
 	return body, nil
 }
 
+// TopStories fetches the item IDs of the current top stories
 func (h HNClient) TopStories(ctx context.Context) (res TopStoriesResponse, err error) {
 	body, err := h.doGet(ctx, "topstories.json")
 	if err != nil {
@@ -91,6 +99,7 @@ func (h HNClient) TopStories(ctx context.Context) (res TopStoriesResponse, err e
 	return res, nil
 }
 
+// Item fetches an item by the given ID
 func (h HNClient) Item(ctx context.Context, id int) (res ItemResponse, err error) {
 	body, err := h.doGet(ctx, fmt.Sprintf("item/%d.json", id))
 	if err != nil {

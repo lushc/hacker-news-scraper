@@ -21,11 +21,13 @@ var (
 	errRedisHostEnv = fmt.Errorf("missing env var %s", redisHostEnv)
 )
 
+// CachedReader is a wrapper to add Redis-backed caching to an underlying datastore.Reader
 type CachedReader struct {
 	cache  *cache.Cache
 	reader datastore.Reader
 }
 
+// NewCachedReader creates a new CachedReader with a pre-configured Redis client
 func NewCachedReader(reader datastore.Reader) (*CachedReader, error) {
 	// TODO: viper config instead
 	host, ok := os.LookupEnv(redisHostEnv)
@@ -45,6 +47,7 @@ func NewCachedReader(reader datastore.Reader) (*CachedReader, error) {
 	}, nil
 }
 
+// All caches and returns all items from the reader
 func (c CachedReader) All(ctx context.Context) (items []*datastore.Item, err error) {
 	err = c.cache.Once(&cache.Item{
 		Key:   "all-stories",
@@ -57,6 +60,7 @@ func (c CachedReader) All(ctx context.Context) (items []*datastore.Item, err err
 	return items, err
 }
 
+// ByItemType caches and returns items of the given type from the reader
 func (c CachedReader) ByItemType(ctx context.Context, itemType datastore.ItemType) (items []*datastore.Item, err error) {
 	err = c.cache.Once(&cache.Item{
 		Key:   fmt.Sprintf("%s-stories", itemType),
@@ -69,6 +73,7 @@ func (c CachedReader) ByItemType(ctx context.Context, itemType datastore.ItemTyp
 	return items, err
 }
 
+// Close closes the underlying reader connection
 func (c CachedReader) Close() {
 	c.reader.Close()
 }

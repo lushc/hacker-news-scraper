@@ -34,6 +34,7 @@ type Broker struct {
 	errs chan error
 }
 
+// NewBroker creates a new broker for the event source
 func NewBroker(source Source) *Broker {
 	return &Broker{
 		source:      source,

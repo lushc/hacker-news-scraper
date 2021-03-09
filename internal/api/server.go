@@ -22,12 +22,14 @@ var (
 	errServerPortEnv = fmt.Errorf("missing env var %s", serverPortEnv)
 )
 
+// Server is a gRPC server for reading items from the datastore
 type Server struct {
 	port   int
 	reader datastore.Reader
 	pb.UnimplementedAPIServer
 }
 
+// NewServer creates a new server, see Start() for gRPC initialisation
 func NewServer(reader datastore.Reader) (*Server, error) {
 	// TODO: viper config instead
 	portEnv, ok := os.LookupEnv(serverPortEnv)
@@ -46,6 +48,7 @@ func NewServer(reader datastore.Reader) (*Server, error) {
 	}, nil
 }
 
+// ListAll streams all items fetched from the reader
 func (s Server) ListAll(empty *emptypb.Empty, stream pb.API_ListAllServer) error {
 	items, err := s.reader.All(stream.Context())
 	if err != nil {
@@ -61,6 +64,7 @@ func (s Server) ListAll(empty *emptypb.Empty, stream pb.API_ListAllServer) error
 	return nil
 }
 
+// ListType streams all items of the requested type fetched from the reader
 func (s Server) ListType(request *pb.TypeRequest, stream pb.API_ListTypeServer) error {
 	items, err := s.reader.ByItemType(stream.Context(), datastore.EnumTypes[request.Type])
 	if err != nil {
@@ -76,6 +80,7 @@ func (s Server) ListType(request *pb.TypeRequest, stream pb.API_ListTypeServer) 
 	return nil
 }
 
+// Start initialises the gRPC server and starts accepting incoming connections
 func (s *Server) Start() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
 	if err != nil {
