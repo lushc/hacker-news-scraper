@@ -3,14 +3,15 @@ package main
 import (
 	"context"
 	"embed"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/lushc/hacker-news-scraper/internal/datastore"
 	"github.com/lushc/hacker-news-scraper/internal/presenter"
+	pb "github.com/lushc/hacker-news-scraper/protobufs"
 )
 
 var (
@@ -19,21 +20,25 @@ var (
 )
 
 func main() {
+	client, err := presenter.NewClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	ctx := context.Background()
+	allBroker := presenter.NewBroker(client.WrapListAll(ctx, &emptypb.Empty{}))
+	jobBroker := presenter.NewBroker(client.WrapListType(ctx, &pb.TypeRequest{Type: pb.Type_JOB}))
+	storyBroker := presenter.NewBroker(client.WrapListType(ctx, &pb.TypeRequest{Type: pb.Type_STORY}))
+
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	src := func() ([]datastore.Item, error) {
-		// TODO: gRPC client impl
-		return []datastore.Item{
-			{ID: 1, Type: "job", Title: "test1", Content: "", URL: "", Score: 10, CreatedBy: "foo", CreatedAt: time.Now()},
-			{ID: 2, Type: "story", Title: "test2", Content: "", URL: "", Score: 20, CreatedBy: "bar", CreatedAt: time.Now()},
-			{ID: 3, Type: "story", Title: "test3", Content: "", URL: "", Score: 30, CreatedBy: "baz", CreatedAt: time.Now()},
-		}, nil
-	}
-
 	// SSE endpoints
-	e.GET("/events/all", presenter.NewBroker(src).Handle(context.TODO()))
+	e.GET("/events/all", allBroker.Handle(ctx))
+	e.GET("/events/jobs", jobBroker.Handle(ctx))
+	e.GET("/events/stories", storyBroker.Handle(ctx))
 
 	// serve embedded static content
 	contentHandler := echo.WrapHandler(http.FileServer(http.FS(content)))

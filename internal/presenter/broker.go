@@ -12,11 +12,11 @@ import (
 	"github.com/lushc/hacker-news-scraper/internal/datastore"
 )
 
-// EventStream is a channel of SSE events
+// EventStream is a channel of SSE messages
 type EventStream chan string
 
-// Source is a function which provides items
-type Source func() ([]datastore.Item, error)
+// Source is a function which sends items to a channel
+type Source func(items chan<- datastore.Item, errs chan<- error, ephemeral bool)
 
 // Broker is responsible for managing client connections and sending events
 type Broker struct {
@@ -30,6 +30,8 @@ type Broker struct {
 	expiredSubs chan EventStream
 	// channel where items are pushed to for broadcasting to subscribers as an event
 	items chan datastore.Item
+	// channel where errors are pushed to when fetching items
+	errs chan error
 }
 
 func NewBroker(source Source) *Broker {
@@ -40,12 +42,19 @@ func NewBroker(source Source) *Broker {
 		newSubs:     make(chan EventStream),
 		expiredSubs: make(chan EventStream),
 		items:       make(chan datastore.Item),
+		errs:        make(chan error),
 	}
 }
 
+// Handle will start the broker and return a handler for echo to invoke when an endpoint is hit
 func (b *Broker) Handle(ctx context.Context) echo.HandlerFunc {
 	b.run(ctx)
 	return b.handler
+}
+
+// Refresh will source items to be broadcast to subscribers
+func (b *Broker) Refresh() {
+	b.source(b.items, b.errs, false)
 }
 
 // run will begin a goroutine that manages subscribers and broadcasting events to them
@@ -65,13 +74,15 @@ func (b *Broker) run(ctx context.Context) {
 			case item := <-b.items:
 				evt, err := encode(item)
 				if err != nil {
-					b.logger.Error(err)
+					b.logger.Error(fmt.Errorf("encode event for subscribers: %w", err))
 					break
 				}
 
 				for ch := range b.subscribers {
 					ch <- evt
 				}
+			case err := <-b.errs:
+				b.logger.Error(fmt.Errorf("error from broker channel: %w", err))
 			}
 		}
 	}()
@@ -93,20 +104,33 @@ func (b *Broker) handler(c echo.Context) error {
 
 	// start pushing items to the client
 	go func() {
-		items, err := b.source()
-		if err != nil {
-			b.logger.Error(fmt.Errorf("failed to fetch items for client: %w", err))
-			return
-		}
+		items := make(chan datastore.Item)
+		errs := make(chan error)
+		go b.source(items, errs, true)
 
-		for _, item := range items {
-			evt, err := encode(item)
-			if err != nil {
-				b.logger.Error(fmt.Errorf("failed to encode event for client: %w", err))
+		for {
+			select {
+			case <-c.Request().Context().Done():
 				return
-			}
+			case item, ok := <-items:
+				if !ok {
+					return
+				}
 
-			subscriber <- evt
+				evt, err := encode(item)
+				if err != nil {
+					b.logger.Error(fmt.Errorf("encode event for client: %w", err))
+					break
+				}
+
+				subscriber <- evt
+			case err, ok := <-errs:
+				if !ok {
+					return
+				}
+
+				b.logger.Error(fmt.Errorf("error from handler channel: %w", err))
+			}
 		}
 	}()
 
@@ -122,7 +146,7 @@ func (b *Broker) handler(c echo.Context) error {
 			}
 
 			if _, err := res.Write([]byte(evt)); err != nil {
-				return fmt.Errorf("failed to write response: %w", err)
+				return fmt.Errorf("write SSE response: %w", err)
 			}
 
 			res.Flush()
@@ -130,11 +154,11 @@ func (b *Broker) handler(c echo.Context) error {
 	}
 }
 
-// encode will create an SSE string for an item
+// encode will create an SSE message for an item
 func encode(item datastore.Item) (string, error) {
 	data, err := json.Marshal(item)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal item to JSON: %w", err)
+		return "", fmt.Errorf("marshal item to JSON: %w", err)
 	}
 
 	return fmt.Sprintf("id: %d\ndata: %s\n\n", item.ID, data), nil
