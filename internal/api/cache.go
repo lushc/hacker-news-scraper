@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	redisHostEnv = "SERVER_PORT"
+	redisHostEnv = "REDIS_HOST"
 	ttl          = 5 * time.Minute
 )
 
@@ -28,7 +28,7 @@ type CachedReader struct {
 
 func NewCachedReader(reader datastore.Reader) (*CachedReader, error) {
 	// TODO: viper config instead
-	host, ok := os.LookupEnv("REDIS_HOST")
+	host, ok := os.LookupEnv(redisHostEnv)
 	if !ok {
 		return nil, errRedisHostEnv
 	}
