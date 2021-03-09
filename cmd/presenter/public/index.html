@@ -6,12 +6,48 @@
     <link href="style.css" rel="stylesheet"/>
 </head>
 <body>
-<script type="text/javascript">
-    var source = new EventSource('/events/all');
+<div>
+    <input type="radio" id="all" name="type" value="all" checked/>
+    <label for="all">All</label>
 
-    source.onmessage = function(e) {
-        document.body.innerHTML += e.data + '<br>';
-    };
+    <input type="radio" id="jobs" name="type" value="jobs"/>
+    <label for="jobs">Jobs</label>
+
+    <input type="radio" id="stories" name="type" value="stories"/>
+    <label for="stories">Stories</label>
+</div>
+<div id="items"></div>
+<script type="text/javascript">
+    var source = null,
+        seen = {},
+        radioButtons = document.getElementsByName('type'),
+        container = document.getElementById('items');
+
+    function subscribe(type) {
+        if (source !== null) {
+            source.close();
+            seen = {};
+            container.innerHTML = '';
+        }
+
+        source = new EventSource('/events/' + type);
+
+        source.onmessage = function(e) {
+            console.log(e)
+            if (!seen.hasOwnProperty(e.lastEventId)) {
+                seen[e.lastEventId] = true
+                container.innerHTML += '<div class="item">' + e.data + '</div>';
+            }
+        };
+    }
+
+    for (var i = 0; i < radioButtons.length; i++) {
+        radioButtons[i].addEventListener('change', function() {
+            subscribe(this.value);
+        });
+    }
+
+    subscribe('all');
 </script>
 </body>
 </html>
